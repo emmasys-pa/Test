@@ -1,0 +1,58 @@
+# Visual Studio and .NET specific files
+.vs/
+bin/
+obj/
+*.pdb
+*.suo
+*.user
+*.log
+*.bak
+*.cache
+*.ncb
+*.scc
+*.vssscc
+*.vspscc
+*.vsp
+*.rptproj.user
+*.resharper
+*.dotSettings
+*.csproj.user
+*.vbproj.user
+*.fsproj.user
+*.sqlproj.user
+*.dbmdl
+*.publish.xml
+*.pubxml
+*.pubxml.user
+*.tdl
+
+# NuGet files
+packages/
+*.nupkg
+*.snupkg
+*.intellisense.xml
+project.lock.json
+project.assets.json
+
+# Rider specific files
+.idea/
+*.iml
+
+# Visual Studio Code specific files
+.vscode/
+
+# Build artifacts
+TestResults/
+_ReSharper.*/
+[Pp]ublish/
+[Dd]ebug/
+[Rr]elease/
+
+# User-specific settings (can be added to global gitignore if preferred)
+*.userprefs
+*.DS_Store # macOS
+Thumbs.db # Windows
+
+# Local settings not meant for version control
+appsettings.Development.json
+web.config.user
