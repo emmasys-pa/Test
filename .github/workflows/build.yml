@@ -26,7 +26,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x' # kompatibel med runneren din; endre ved behov
+          dotnet-version: '8.0.x'
 
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
@@ -81,9 +81,6 @@ jobs:
           /p:CollectCoverage=true
           /p:CoverletOutputFormat=cobertura
           /p:CoverletOutput=$(Join-Path $env:GITHUB_WORKSPACE "coverage\")
-      
-       Legg til i BEGIN over:
-         /d:sonar.cs.opencover.reportsPaths="**\coverage\**\coverage.cobertura.xml"
 
       - name: Sonar END
         env:
