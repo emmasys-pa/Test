@@ -16,17 +16,17 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: 17
-          distribution: 'zulu'
+          distribution: zulu
 
-      - name: Check out
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up .NET (match prosjektets versjon)
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x' # evt. 7.0.x hvis prosjektet ditt bruker det
+          dotnet-version: '9.0.x' # kompatibel med runneren din; endre ved behov
 
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
@@ -56,10 +56,10 @@ jobs:
           dotnet --info
           dotnet restore
           $sln = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter *.sln -Recurse | Select-Object -First 1
-          if (-not $sln) { throw "Fant ingen .sln i repoet. Legg inn sti til .sln eller kjør i prosjektkatalogen." }
-          echo "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          if (-not $sln) { throw "Fant ingen .sln i repoet. Bruk Løsning B under, eller angi sti til .csproj/.sln manuelt." }
+          "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Begin Sonar analysis
+      - name: Sonar BEGIN
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
@@ -70,29 +70,23 @@ jobs:
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           /d:sonar.host.url="https://sonarcloud.io"
 
-      - name: Build (solution)
+      - name: Build solution
         shell: powershell
-        run: |
-          dotnet build "$env:SLN_PATH" --no-restore -c Release
+        run: dotnet build "$env:SLN_PATH" --no-restore -c Release
 
       - name: Test with coverage
         shell: powershell
-        run: |
-          dotnet test "$env:SLN_PATH" -c Release --no-build `
-            /p:CollectCoverage=true `
-            /p:CoverletOutputFormat=cobertura `
-            /p:CoverletOutput="$env:WORKSPACE\coverage\"
+        run: >
+          dotnet test "$env:SLN_PATH" -c Release --no-build
+          /p:CollectCoverage=true
+          /p:CoverletOutputFormat=cobertura
+          /p:CoverletOutput=$(Join-Path $env:GITHUB_WORKSPACE "coverage\")
       
-      - name: Attach coverage to Sonar
-        shell: powershell
-        run: |
-          echo "Coverage path: $env:GITHUB_WORKSPACE\coverage\**\coverage.cobertura.xml"
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+       Legg til i BEGIN over:
+         /d:sonar.cs.opencover.reportsPaths="**\coverage\**\coverage.cobertura.xml"
 
-      - name: End Sonar analysis
+      - name: Sonar END
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
-        run: |
-          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        run: ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
