@@ -67,7 +67,7 @@ jobs:
           ${{ runner.temp }}\scanner\dotnet-sonarscanner begin
           /k:"emmasys-pa_Test"
           /o:"emmasys-pa"
-          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.token=$SONAR_TOKEN
           /d:sonar.host.url="https://sonarcloud.io"
 
       - name: Build solution
@@ -86,4 +86,4 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
-        run: ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+        run: ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token=$SONAR_TOKEN
