@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -29,6 +31,8 @@ app.MapGet("/weatherforecast", () =>
                     summaries[Random.Shared.Next(summaries.Length)]
                 ))
             .ToArray();
+        var northpolePassword = "password";
+        var northpoleHashed = SHA256.HashData( System.Text.Encoding.UTF8.GetBytes(northpolePassword));
         return forecast;
     })
     .WithName("GetWeatherForecast");
