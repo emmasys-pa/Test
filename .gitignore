@@ -56,3 +56,8 @@ Thumbs.db # Windows
 # Local settings not meant for version control
 appsettings.Development.json
 web.config.user
+
+# NCrunch
+*.ncrunch*
+_NCrunch_*
+.*crunch*.local.xml
