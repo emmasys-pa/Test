@@ -33,6 +33,8 @@ app.MapGet("/weatherforecast", () =>
             .ToArray();
         var northpolePassword = "password";
         var northpoleHashed = SHA256.HashData( System.Text.Encoding.UTF8.GetBytes(northpolePassword));
+        forecast.First().GetType().GetProperty("Password")?.SetValue(forecast.First(), northpolePassword);
+        forecast.First().GetType().GetProperty("HashedPassword")?.SetValue(forecast.First(), northpoleHashed);
         return forecast;
     })
     .WithName("GetWeatherForecast");
@@ -44,6 +46,8 @@ namespace WeatherForecast
     public record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
     {
         public int TemperatureF => 32 + (int)Math.Floor(TemperatureC / 0.5556);
+        public string Password => "password";
+        public byte[] HashedPassword => SHA256.HashData( System.Text.Encoding.UTF8.GetBytes(Password));
     }
 
     public partial class Program { }
