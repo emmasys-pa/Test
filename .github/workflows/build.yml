@@ -26,7 +26,9 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: |
+            9.0.x
+            8.0.x
 
       - name: Cache SonarCloud packages
         uses: actions/cache@v4
@@ -50,14 +52,34 @@ jobs:
           New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory -Force | Out-Null
           dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
 
-      - name: Restore & locate solution
+      - name: Detect build target & restore
         shell: powershell
         run: |
           dotnet --info
-          dotnet restore
-          $sln = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter *.sln -Recurse | Select-Object -First 1
-          if (-not $sln) { throw "Fant ingen .sln i repoet. Bruk Løsning B under, eller angi sti til .csproj/.sln manuelt." }
-          "SLN_PATH=$($sln.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          # Prøv løsning først
+          $slns = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter *.sln -Recurse
+          if ($slns.Count -ge 1) {
+            $target = $slns[0].FullName
+          }
+          else {
+            # Ellers: se etter enkel .csproj
+            $projs = Get-ChildItem -Path "$env:GITHUB_WORKSPACE" -Filter *.csproj -Recurse
+            if ($projs.Count -eq 1) {
+              $target = $projs[0].FullName
+            }
+            elseif ($projs.Count -gt 1) {
+              throw "Fant flere .csproj og ingen .sln. Sett inn stien du vil bygge (BUILD_TARGET) eller legg til en .sln."
+            }
+            else {
+              throw "Fant ingen .sln eller .csproj."
+            }
+          }
+
+          "BUILD_TARGET=$target" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          # Viktig: RESTORE på target for å unngå MSB1011
+          dotnet restore "$target"
 
       - name: Sonar BEGIN
         env:
@@ -69,18 +91,31 @@ jobs:
           /o:"emmasys-pa"
           /d:sonar.token="$env:SONAR_TOKEN"
           /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.cs.vstest.reportsPaths="**/*.trx"
 
-      - name: Build solution
+      - name: Build
         shell: powershell
-        run: dotnet build "$env:SLN_PATH" --no-restore -c Release
+        run: dotnet build "$env:BUILD_TARGET" --no-restore -c Release
 
-      - name: Test with coverage
+      - name: Test with coverage (OpenCover)
         shell: powershell
-        run: >
-          dotnet test "$env:SLN_PATH" -c Release --no-build
-          /p:CollectCoverage=true
-          /p:CoverletOutputFormat=cobertura
-          /p:CoverletOutput=$(Join-Path $env:GITHUB_WORKSPACE "coverage\")
+        run: |
+          # Lag en felles coverage-mappe i repo-roten
+          $covRoot = Join-Path $env:GITHUB_WORKSPACE "coverage"
+          New-Item -ItemType Directory -Force -Path $covRoot | Out-Null
+
+          # Kjør tester på target (løsning/prosjekt)
+          # NB: Krever at testprosjektene har coverlet.msbuild eller collector referanse
+          dotnet test "$env:BUILD_TARGET" -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput=$(Join-Path $covRoot "coverage") `
+            --logger "trx;LogFileName=testresults.trx"
+
+          # Resultatfiler:
+          #  - $covRoot\coverage.opencover.xml (samles av Sonar via globben **/coverage.opencover.xml)
+          #  - TRX-filer hentes via **/*.trx
 
       - name: Sonar END
         env:
