@@ -91,18 +91,31 @@ jobs:
           /o:"emmasys-pa"
           /d:sonar.token="$env:SONAR_TOKEN"
           /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.cs.vstest.reportsPaths="**/*.trx"
 
       - name: Build
         shell: powershell
         run: dotnet build "$env:BUILD_TARGET" --no-restore -c Release
 
-      - name: Test with coverage
+      - name: Test with coverage (OpenCover)
         shell: powershell
-        run: >
-          dotnet test "$env:BUILD_TARGET" -c Release --no-build
-          /p:CollectCoverage=true
-          /p:CoverletOutputFormat=cobertura
-          /p:CoverletOutput=$(Join-Path $env:GITHUB_WORKSPACE "coverage\")
+        run: |
+          # Lag en felles coverage-mappe i repo-roten
+          $covRoot = Join-Path $env:GITHUB_WORKSPACE "coverage"
+          New-Item -ItemType Directory -Force -Path $covRoot | Out-Null
+
+          # Kjør tester på target (løsning/prosjekt)
+          # NB: Krever at testprosjektene har coverlet.msbuild eller collector referanse
+          dotnet test "$env:BUILD_TARGET" -c Release --no-build `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput=$(Join-Path $covRoot "coverage") `
+            --logger "trx;LogFileName=testresults.trx"
+
+          # Resultatfiler:
+          #  - $covRoot\coverage.opencover.xml (samles av Sonar via globben **/coverage.opencover.xml)
+          #  - TRX-filer hentes via **/*.trx
 
       - name: Sonar END
         env:
